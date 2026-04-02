@@ -1,0 +1,22 @@
+# Build artefacts
+target/
+
+# Editor & OS noise
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Git history (not needed in the image)
+.git/
+.gitignore
+
+# CI / docs
+*.md
+LICENSE
+
+# Local env overrides
+.env
+.env.*
+

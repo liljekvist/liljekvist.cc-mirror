@@ -1,0 +1,30 @@
+services:
+  web:
+    # Image is built & pushed by GitLab CI; the registry URL is:
+    #   registry.gitlab.com/<namespace>/liljekvist-cc-mainpage
+    # On the VPS set the REGISTRY_IMAGE env var or hard-code it below.
+    image: ${REGISTRY_IMAGE:-registry.gitlab.com/liljekvist/liljekvist-cc-mainpage}:${IMAGE_TAG:-latest}
+    container_name: liljekvist-cc-mainpage
+    restart: unless-stopped
+
+    # Only expose to localhost — nginx is the sole public entry-point.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    # Explicit resource limits — adjust to your VPS size.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 128M
+
+    # Health-check: ping the HTTP root every 30 s.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+
+
