@@ -74,7 +74,7 @@ fn cmd_date() -> String {
 fn cmd_links() -> String {
     r#"<span class="kw">Links:</span>
   <a href="https://github.com/liljekvist" target="_blank" class="lnk">github.com/liljekvist</a>
-  <a href="mailto:hello@liljekvist.cc" class="lnk">hello@liljekvist.cc</a>"#
+  <a href="https://git.liljekvist.cc" class="lnk">git.liljekvist.cc</a>"#
         .to_string()
 }
 
