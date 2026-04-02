@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<div id="terminal">
+  <div id="output">
+    <div class="line">
+      <span class="prompt-host">visitor@liljekvist.cc</span><span class="prompt-sep">:</span><span class="prompt-dir">~</span><span class="prompt-dollar"> $</span>
+      <span class="cmd-echo"> cat welcome.txt</span>
+    </div>
+    <div class="line out">
+██╗     ██╗██╗     ██╗███████╗██╗  ██╗██╗   ██╗██╗███████╗████████╗
+██║     ██║██║     ██║██╔════╝██║ ██╔╝██║   ██║██║██╔════╝╚══██╔══╝
+██║     ██║██║     ██║█████╗  █████╔╝ ██║   ██║██║███████╗   ██║
+██║     ██║██║██   ██║██╔══╝  ██╔═██╗ ╚██╗ ██╔╝██║╚════██║   ██║
+███████╗██║██║╚█████╔╝███████╗██║  ██╗ ╚████╔╝ ██║███████║   ██║
+╚══════╝╚═╝╚═╝ ╚════╝ ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝   ╚═╝
+    </div>
+    <div class="line out">Type <span class="kw">help</span> for available commands.</div>
+    <div class="line">&nbsp;</div>
+  </div>
+
+  <div id="input-row">
+    <span class="prompt-host">visitor@liljekvist.cc</span><span
+      class="prompt-sep">:</span><span
+      class="prompt-dir">~</span><span
+      class="prompt-dollar"> $&nbsp;</span><input
+      id="cmd-input"
+      type="text"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      autofocus
+    />
+  </div>
+</div>
+
+<script>
+(function () {
+  const output   = document.getElementById('output');
+  const input    = document.getElementById('cmd-input');
+  const WS_URL   = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws';
+
+  let ws;
+  let history    = [];
+  let histIdx    = -1;
+  let pending    = null;
+
+  // ── WebSocket ────────────────────────────────────────────────────────────
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onmessage = function (e) {
+      const msg = JSON.parse(e.data);
+      if (msg.clear) {
+        // Remove everything except the static welcome block (first 3 lines).
+        const lines = output.querySelectorAll('.line');
+        lines.forEach(function (el, i) { if (i >= 3) el.remove(); });
+      } else if (msg.output) {
+        appendOutput(msg.output);
+      }
+      // Re-echo the pending command line now that the response arrived.
+      if (pending !== null) {
+        scrollBottom();
+        pending = null;
+      }
+    };
+
+    ws.onclose = function () {
+      setTimeout(connect, 2000);
+    };
+  }
+
+  connect();
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function prompt() {
+    return '<span class="prompt-host">visitor@liljekvist.cc</span>'
+         + '<span class="prompt-sep">:</span>'
+         + '<span class="prompt-dir">~</span>'
+         + '<span class="prompt-dollar"> $</span>';
+  }
+
+  function appendLine(html) {
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.innerHTML = html;
+    output.appendChild(div);
+  }
+
+  function appendOutput(html) {
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.innerHTML = html;
+    output.appendChild(div);
+    scrollBottom();
+  }
+
+  function scrollBottom() {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  // ── Input handling ────────────────────────────────────────────────────────
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const line = input.value;
+      input.value = '';
+      histIdx = -1;
+
+      // Echo the typed command.
+      appendLine(prompt() + '&nbsp;<span class="cmd-echo">' + escHtml(line) + '</span>');
+
+      if (line.trim() !== '') {
+        history.unshift(line);
+        pending = line;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ line: line }));
+        } else {
+          appendOutput('<span class="err">not connected — retrying…</span>');
+          pending = null;
+        }
+      }
+      scrollBottom();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (histIdx < history.length - 1) {
+        histIdx++;
+        input.value = history[histIdx];
+        // Move cursor to end.
+        setTimeout(function () { input.setSelectionRange(input.value.length, input.value.length); }, 0);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (histIdx > 0) {
+        histIdx--;
+        input.value = history[histIdx];
+      } else {
+        histIdx = -1;
+        input.value = '';
+      }
+    } else if (e.key === 'l' && e.ctrlKey) {
+      e.preventDefault();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ line: 'clear' }));
+      }
+    }
+  });
+
+  // Keep focus on input when clicking anywhere in the terminal.
+  document.getElementById('terminal').addEventListener('click', function () {
+    input.focus();
+  });
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+{% endblock content %}
+
