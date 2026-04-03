@@ -64,13 +64,11 @@ build:
 docker:
   stage: docker
   image: docker:27
-  services:
-    - docker:27-dind
   needs:
     - job: build
       artifacts: true
   variables:
-    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_HOST: unix:///var/run/docker.sock
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
