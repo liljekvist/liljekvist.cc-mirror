@@ -8,6 +8,7 @@ mod state;
 use axum::{Router, routing::get};
 use state::AppState;
 use tokio::net::TcpListener;
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
@@ -22,6 +23,7 @@ async fn main() {
     let app: Router<()> = Router::new()
         .route("/", get(handlers::index))
         .route("/ws", get(handlers::ws::ws_handler))
+        .nest_service("/assets", ServeDir::new("assets"))
         .with_state(state);
 
     let listener = TcpListener::bind(cfg.bind_addr)

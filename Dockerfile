@@ -22,6 +22,8 @@ COPY templates ./templates
 # Tera templates (resolved relative to the working directory at runtime)
 COPY ascii_art ./ascii_art
 
+COPY assets ./assets
+
 RUN chown -R appuser:appuser /app
 USER appuser
 
