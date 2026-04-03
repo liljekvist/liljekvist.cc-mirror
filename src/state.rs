@@ -12,6 +12,8 @@ pub type AppEngine = Engine<Tera>;
 #[derive(Clone)]
 pub struct AppState {
     pub engine: AppEngine,
+    /// All ASCII-art styles loaded from disk at startup.
+    pub ascii_styles: Vec<String>,
 }
 
 impl FromRef<AppState> for AppEngine {
@@ -27,13 +29,14 @@ impl AppState {
             Tera::new(config.template_glob).expect("Failed to parse Tera templates");
 
         if config.template_autoreload {
-            // In dev mode, always reload templates from disk so edits are
-            // picked up without restarting the server.
             tera.full_reload().expect("Failed to reload Tera templates");
         }
 
+        let ascii_styles = crate::ascii_art::load(std::path::Path::new(config.ascii_art_dir));
+
         AppState {
             engine: Engine::from(tera),
+            ascii_styles,
         }
     }
 }

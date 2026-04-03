@@ -5,5 +5,6 @@ use serde::Serialize;
 pub struct IndexModel {
     pub title: String,
     pub message: String,
+    pub ascii_art: String,
 }
 

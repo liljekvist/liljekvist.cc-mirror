@@ -83,6 +83,18 @@
     /* ── Blinking cursor on the input ───────────────────────────────────── */
     #cmd-input::placeholder { color: transparent; }
 
+    /* ── ASCII banner ───────────────────────────────────────────────────── */
+    pre.ascii-banner {
+      font-family: var(--font);
+      font-size: clamp(6px, 1.1vw, 13px);
+      line-height: 1.2;
+      color: var(--green);
+      overflow-x: auto;
+      white-space: pre;
+      margin: 0;
+      padding: 0;
+    }
+
     /* ── Mobile: keep the input bar fixed at bottom ─────────────────────── */
     @media (max-width: 600px) {
       #input-row {

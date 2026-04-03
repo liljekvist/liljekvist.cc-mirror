@@ -5,18 +5,11 @@
 {% block content %}
 <div id="terminal">
   <div id="output">
-    <div class="line">
+    <div>
       <span class="prompt-host">visitor@liljekvist.cc</span><span class="prompt-sep">:</span><span class="prompt-dir">~</span><span class="prompt-dollar"> $</span>
       <span class="cmd-echo"> cat welcome.txt</span>
     </div>
-    <div class="line out">
-██╗     ██╗██╗     ██╗███████╗██╗  ██╗██╗   ██╗██╗███████╗████████╗
-██║     ██║██║     ██║██╔════╝██║ ██╔╝██║   ██║██║██╔════╝╚══██╔══╝
-██║     ██║██║     ██║█████╗  █████╔╝ ██║   ██║██║███████╗   ██║
-██║     ██║██║██   ██║██╔══╝  ██╔═██╗ ╚██╗ ██╔╝██║╚════██║   ██║
-███████╗██║██║╚█████╔╝███████╗██║  ██╗ ╚████╔╝ ██║███████║   ██║
-╚══════╝╚═╝╚═╝ ╚════╝ ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝   ╚═╝
-    </div>
+    <div class="line out"><pre class="ascii-banner">{{ ascii_art }}</pre></div>
     <div class="line out">Type <span class="kw">help</span> for available commands.</div>
     <div class="line">&nbsp;</div>
   </div>
@@ -25,7 +18,7 @@
     <span class="prompt-host">visitor@liljekvist.cc</span><span
       class="prompt-sep">:</span><span
       class="prompt-dir">~</span><span
-      class="prompt-dollar"> $&nbsp;</span><input
+      class="prompt-dollar">&nbsp;$&nbsp;</span><input
       id="cmd-input"
       type="text"
       autocomplete="off"

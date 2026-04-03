@@ -1,3 +1,4 @@
+mod ascii_art;
 mod commands;
 mod config;
 mod handlers;
