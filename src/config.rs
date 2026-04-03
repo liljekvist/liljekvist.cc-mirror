@@ -14,6 +14,8 @@ pub struct Config {
     pub template_autoreload: bool,
     /// Enable verbose/debug logging.
     pub debug_logging: bool,
+    /// Fake secret value returned when the user types `echo $SECRET`.
+    pub secret: &'static str,
 }
 
 /// Development configuration — hot-reload templates, verbose output, localhost only.
@@ -25,6 +27,7 @@ pub fn get() -> Config {
         ascii_art_dir: "ascii_art",
         template_autoreload: true,
         debug_logging: true,
+        secret: "hunter2",
     }
 }
 
@@ -37,6 +40,7 @@ pub fn get() -> Config {
         ascii_art_dir: "ascii_art",
         template_autoreload: false,
         debug_logging: false,
+        secret: "hunter2",
     }
 }
 

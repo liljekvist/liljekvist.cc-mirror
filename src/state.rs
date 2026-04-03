@@ -14,6 +14,8 @@ pub struct AppState {
     pub engine: AppEngine,
     /// All ASCII-art styles loaded from disk at startup.
     pub ascii_styles: Vec<String>,
+    /// Value shown when the user types `echo $SECRET`.
+    pub secret: &'static str,
 }
 
 impl FromRef<AppState> for AppEngine {
@@ -37,6 +39,7 @@ impl AppState {
         AppState {
             engine: Engine::from(tera),
             ascii_styles,
+            secret: config.secret,
         }
     }
 }
