@@ -5,6 +5,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user for the service.
 RUN useradd -m -u 1001 appuser
 
