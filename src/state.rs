@@ -4,17 +4,12 @@ use tera::Tera;
 
 use crate::config::Config;
 
-/// Type alias for the Tera-backed template engine.
 pub type AppEngine = Engine<Tera>;
 
-/// Shared application state.
-/// `FromRef` allows axum-template to extract `AppEngine` directly from state.
 #[derive(Clone)]
 pub struct AppState {
     pub engine: AppEngine,
-    /// All ASCII-art styles loaded from disk at startup.
     pub ascii_styles: Vec<String>,
-    /// Value shown when the user types `echo $SECRET`.
     pub secret: &'static str,
 }
 
@@ -25,7 +20,6 @@ impl FromRef<AppState> for AppEngine {
 }
 
 impl AppState {
-    /// Build application state from the provided configuration.
     pub fn new(config: &Config) -> Self {
         let mut tera =
             Tera::new(config.template_glob).expect("Failed to parse Tera templates");

@@ -1,7 +1,3 @@
-/// Application configuration, resolved at compile time based on build profile.
-///
-/// - `cargo build` / `cargo run`           → dev profile  (`debug_assertions` ON)
-/// - `cargo build --release` / `cargo run --release` → release profile (`debug_assertions` OFF)
 #[derive(Debug, Clone)]
 pub struct Config {
     /// Address the HTTP server binds to.
@@ -18,7 +14,6 @@ pub struct Config {
     pub secret: &'static str,
 }
 
-/// Development configuration — hot-reload templates, verbose output, localhost only.
 #[cfg(debug_assertions)]
 pub fn get() -> Config {
     Config {

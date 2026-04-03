@@ -2,8 +2,7 @@ use std::fs;
 use std::path::Path;
 use rand::prelude::IndexedRandom;
 
-/// Load all `*.txt` files from `dir` and return their contents as owned strings.
-/// Files are sorted by name so the order is deterministic.
+/// Load all `*.txt` files
 pub fn load(dir: &Path) -> Vec<String> {
     let mut styles: Vec<String> = Vec::new();
 
@@ -33,7 +32,6 @@ pub fn load(dir: &Path) -> Vec<String> {
     styles
 }
 
-/// Pick a random style from a pre-loaded collection.
 pub fn random(styles: &[String]) -> &str {
     let mut rng = rand::rng();
     styles.choose(&mut rng).map(String::as_str).unwrap_or("")

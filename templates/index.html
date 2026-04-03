@@ -43,7 +43,6 @@
   let histIdx    = -1;
   let pending    = null;
 
-  // ── WebSocket ────────────────────────────────────────────────────────────
   function connect() {
     ws = new WebSocket(WS_URL);
 
@@ -56,7 +55,7 @@
       } else if (msg.output) {
         appendOutput(msg.output);
       }
-      // Re-echo the pending command line now that the response arrived.
+
       if (pending !== null) {
         scrollBottom();
         pending = null;
@@ -70,7 +69,6 @@
 
   connect();
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
   function prompt() {
     return '<span class="prompt-host">visitor@liljekvist.cc</span>'
          + '<span class="prompt-sep">:</span>'
@@ -97,7 +95,6 @@
     window.scrollTo(0, document.body.scrollHeight);
   }
 
-  // ── Input handling ────────────────────────────────────────────────────────
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -105,7 +102,6 @@
       input.value = '';
       histIdx = -1;
 
-      // Echo the typed command.
       appendLine(prompt() + '&nbsp;<span class="cmd-echo">' + escHtml(line) + '</span>');
 
       if (line.trim() !== '') {
@@ -144,7 +140,6 @@
     }
   });
 
-  // Keep focus on input when clicking anywhere in the terminal.
   document.getElementById('terminal').addEventListener('click', function () {
     input.focus();
   });

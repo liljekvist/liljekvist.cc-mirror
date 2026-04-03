@@ -1,10 +1,3 @@
-//! Built-in terminal commands executed server-side.
-//!
-//! Each function receives the argument tokens (everything after the command name)
-//! and returns a `String` that will be sent back to the client as HTML.
-
-/// Dispatch a parsed command to the appropriate handler.
-/// Returns an HTML string to display in the terminal output.
 pub fn dispatch(cmd: &str, args: &[&str], secret: &str) -> String {
     match cmd {
         "help"   => cmd_help(),
