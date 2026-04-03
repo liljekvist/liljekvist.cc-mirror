@@ -4,31 +4,36 @@
 # Stages:
 #   build  → compile release binary with Rust, store as artifact
 #   docker → build a lean runtime image and push to GitLab Container Registry
-#   deploy → SSH into the VPS, pull the new image, restart docker compose
+#   deploy → pull the new image and restart the service via the host Docker socket
 #
-# Required CI/CD variables (Settings → CI/CD → Variables):
-#   DEPLOY_HOST   — VPS hostname or IP          (e.g. liljekvist.cc)
-#   DEPLOY_USER   — SSH user on the VPS         (e.g. deploy)
-#   DEPLOY_KEY    — private SSH key (File type, protected)
-#   DEPLOY_DIR    — path to docker-compose.yml  (e.g. /srv/liljekvist-cc-mainpage)
+# Deployment workflow:
+#   • Push to main/master → builds image tagged with commit SHA.
+#     Deploy job is available as a *manual* gate in the pipeline UI.
+#   • Push a semver tag (e.g. git tag v1.2.3 && git push --tags) →
+#     builds image tagged with the version and deploys automatically.
+#
+# No CI/CD variables required — deployment uses the host Docker socket directly.
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Prevent duplicate pipelines: only run for MRs, the default branch, and semver tags.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
 
 stages:
   - build
   - docker
   - deploy
 
-# ── Shared variables ──────────────────────────────────────────────────────────
 variables:
-  CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"          # cache cargo registry inside the project
-  REGISTRY_IMAGE: "${CI_REGISTRY_IMAGE}"          # registry.gitlab.com/<namespace>/<project>
-  IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"             # pin to the exact commit SHA
+  CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+  REGISTRY_IMAGE: "${CI_REGISTRY_IMAGE}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1 — build
-# Compiles the release binary using the official Rust Docker image.
-# The binary and templates are saved as a pipeline artifact consumed by
-# the docker stage — no Rust toolchain is needed in the runtime image.
+# Runs on MRs too so the binary is validated before merge.
 # ─────────────────────────────────────────────────────────────────────────────
 build:
   stage: build
@@ -49,17 +54,11 @@ build:
       - target/release/liljekvist-cc-mainpage
       - templates/
     expire_in: 1 hour
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "master"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — docker
-# Builds the runtime image from the pre-compiled artifact and pushes it to
-# the GitLab Container Registry with two tags:
-#   • <commit-sha>  — immutable, used by the deploy stage
-#   • latest        — convenience tag for manual pulls
+# Skipped for MR pipelines — image publishing only happens on real commits.
+# IMAGE_TAG is the semver tag for releases, or the commit SHA for branch builds.
 # ─────────────────────────────────────────────────────────────────────────────
 docker:
   stage: docker
@@ -73,63 +72,52 @@ docker:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
     - |
+      IMAGE_TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
       docker build \
         --tag "${REGISTRY_IMAGE}:${IMAGE_TAG}" \
         --tag "${REGISTRY_IMAGE}:latest" \
         .
-    - docker push "${REGISTRY_IMAGE}:${IMAGE_TAG}"
-    - docker push "${REGISTRY_IMAGE}:latest"
+      docker push "${REGISTRY_IMAGE}:${IMAGE_TAG}"
+      docker push "${REGISTRY_IMAGE}:latest"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 3 — deploy
-# SSHs into the VPS, authenticates with the registry, pulls the new image
-# by its exact SHA tag, and restarts the service via docker compose.
-# Zero-downtime: compose starts the new container before stopping the old one
-# because the healthcheck keeps traffic flowing until the new one is healthy.
+# Uses the host Docker socket directly — no SSH required.
+# Pulls the new image and restarts the service using this repo's compose file.
+# The project name is pinned so compose always manages the same containers
+# regardless of which directory the CI job runs in.
+#
+# Semver tag pipelines → deploys automatically after docker stage succeeds.
+# Default branch pipelines → manual gate: click ▶ in the pipeline UI to deploy.
 # ─────────────────────────────────────────────────────────────────────────────
 deploy:
   stage: deploy
-  image: alpine:3.19
+  image: docker:27
   needs:
     - job: docker
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
   before_script:
-    - apk add --no-cache openssh-client
-    - eval $(ssh-agent -s)
-    - chmod 400 "$DEPLOY_KEY"
-    - ssh-add "$DEPLOY_KEY"
-    - mkdir -p ~/.ssh
-    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
+    - IMAGE_TAG="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}"
     - |
-      ssh "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s << EOF
-        set -euo pipefail
-
-        # Authenticate against the GitLab registry on the VPS.
-        echo "${CI_REGISTRY_PASSWORD}" | \
-          docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
-
-        cd "${DEPLOY_DIR}"
-
-        # Pull the exact image built in this pipeline.
-        REGISTRY_IMAGE="${REGISTRY_IMAGE}" \
-        IMAGE_TAG="${IMAGE_TAG}" \
-        docker compose pull
-
-        # Restart with zero downtime: bring up new container, then remove old.
-        REGISTRY_IMAGE="${REGISTRY_IMAGE}" \
-        IMAGE_TAG="${IMAGE_TAG}" \
-        docker compose up -d --remove-orphans
-
-        # Clean up dangling images to reclaim disk space.
-        docker image prune -f
-      EOF
+      REGISTRY_IMAGE="${REGISTRY_IMAGE}" \
+      IMAGE_TAG="${IMAGE_TAG}" \
+      docker compose --project-name "${CI_PROJECT_NAME}" pull
+    - |
+      REGISTRY_IMAGE="${REGISTRY_IMAGE}" \
+      IMAGE_TAG="${IMAGE_TAG}" \
+      docker compose --project-name "${CI_PROJECT_NAME}" up -d --remove-orphans
+    - docker image prune -f
   environment:
     name: production
     url: https://liljekvist.cc
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "master"'
-
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
