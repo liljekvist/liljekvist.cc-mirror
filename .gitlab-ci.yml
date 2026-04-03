@@ -32,7 +32,7 @@ variables:
 # ─────────────────────────────────────────────────────────────────────────────
 build:
   stage: build
-  image: rust:1.83-slim
+  image: rust:latest
   cache:
     key:
       files:
