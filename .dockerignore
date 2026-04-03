@@ -1,5 +1,6 @@
 # Build artefacts
 target/
+!target/release/liljekvist-cc-mainpage
 
 # Editor & OS noise
 .idea/
